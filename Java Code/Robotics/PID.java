@@ -1,49 +1,82 @@
-public class PID{
-	public Motor leftMotor;
-	public Motor rightMotor;
+package com.qualcomm.ftcrobotcontroller.opmodes;
 
-	private final String LEFT_MOTOR_NAME "left";
-	private final String RIGHT_MOTOR_NAME = "right";
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.HardwareMap;
 
-	public boolean isRightSlaved = true;
+/**
+ * Created by BHS on 12/4/2015.
+ */
+public class PID {
+    public DcMotor leftMotor;
+    public DcMotor rightMotor;
 
-	public final double k = 1.0;
+    private final String LEFT_MOTOR_NAME = "backLeft";
+    private final String RIGHT_MOTOR_NAME = "backRight";
 
-	public PID(HardwareMap hardwareMap){
-		leftMotor = hardwareMap.dcMotor.get(LEFT_MOTOR_NAME);
+    private DcMotor slaveMotor;
+    private DcMotor masterMotor;
+
+    private int slaveStartPos = 0;
+    private int masterStartPos = 0;
+
+    public boolean isRightSlaved = true;
+
+    public final double sensitivity = 0.1;
+
+    private boolean isTurning = false;
+
+    public PID(HardwareMap hardwareMap, boolean  rightSlaved){
+        leftMotor = hardwareMap.dcMotor.get(LEFT_MOTOR_NAME);
         rightMotor = hardwareMap.dcMotor.get(RIGHT_MOTOR_NAME);
-	}
 
-	public void update(){
-		int slaveEncVal;
-		int masterEncVal;
 
-		int slaveMotor;
-		int masterMotor;
+        if (isRightSlaved){
+            slaveMotor = rightMotor;
+            masterMotor = leftMotor;
+        } else {
+            slaveMotor = leftMotor;
+            masterMotor = rightMotor;
+        }
+    }
 
-		if (isRightSlaved){
-			slaveEncVal = rightEncoder();
-			masterEncVal = leftEncoder();
+    public void update() {
+        int slaveEncVal = slaveEncoder();
+        int masterEncVal = masterEncoder();
 
-			slaveMotor = rightMotor;
-			masterMotor = leftMotor;
-		} else {
-			slaveEncVal = leftEncoder();
-			masterEncVal = rightEncoder();
+        if (isTurning){
+            masterEncVal *= -1;
+        }
+        double masterSlaveRatio = masterEncVal / slaveEncVal;
+        double slaveChange = (1 - masterSlaveRatio) * sensitivity;
+    }
 
-			slaveMotor = leftMotor;
-			masterMotor = rightMotor;
-		}
+    public int slaveEncoder(){
+        return slaveMotor.getCurrentPosition() - slaveStartPos;
+    }
 
-		double masterSlaveRatio = masterEncVal/slaveEncVal;
-		double slaveChange = (masterSlaveRatio - 1)
-	}
+    public int masterEncoder() {
+        return masterMotor.getCurrentPosition() - masterStartPos;
+    }
 
-	public int leftEncoder(){
-		return leftMotor.getCurrentPosition();
-	}
+    public void setStraight(){
+        isTurning = false;
 
-	public int rightEncoder(){
-		return rightMotor.getCurrentPosition();
-	}
+        reset();
+    }
+
+    public void setTurning(){
+        isTurning = true;
+
+        reset();
+    }
+
+    public void reset(){
+        slaveStartPos = slaveMotor.getCurrentPosition();
+        masterStartPos = masterMotor.getCurrentPosition();
+    }
+
+    public void setSpeeds(double leftSpeed, double rightSpeed){
+        leftMotor.setPower(leftSpeed);
+        rightMotor.setPower(rightSpeed);
+    }
 }
